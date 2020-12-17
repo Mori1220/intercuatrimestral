@@ -1,12 +1,26 @@
 const express = require('express')
 const Usuario = require('../models/usuario'); //modelo
+const _ = require('underscore');
+const { identity } = require('underscore');
 const app = express();
 
   app.get('/usuario', function (req, res) {
-      res.json({
-          ok: 200,
-          msg: 'Usuarios consultados con exito'
-      })
+    Usuario.find({activo: true}).exec((err, usuarios) => {
+        if(err){
+            return res.status(400).json({
+                ok: false,
+                msg: 'Ocurrio un error al momento de consultar',
+                err
+            })
+        }
+
+        res.json({
+            ok: true,
+            msg: 'Lista de usuarios obtenida con exito',
+            conteo: usuarios.length,
+            usuarios
+        })
+     })
     })
   
   app.post('/usuario', function(req, res){
@@ -38,26 +52,58 @@ const app = express();
       }) 
   })
   
-  app.put('/usuario/:id/:nombre', function(req, res){
-      let id = req.params.id
-      let nombre = req.params.nombre
+  app.put('/usuario/:id', function(req, res){
+    let id = req.params.id;
+    let body = _.pick(req.body, ['nombre', 'primer_apellido', 'segundo_apellido', 'edad']); //los campos que se pueden modificar
+
+    Usuario.findByIdAndUpdate(id, body,
+        {new: true, runValidators: true, context: 'query'}, 
+        (err, usrDB) => {
+           if(err) {
+               return res.status(400).json({
+                   ok: false,
+                   msg: 'Ocurrio un error al actualizar',
+                   err
+               })
+           }
+
+           res.json({
+               ok: true,
+               msg: 'El usuario se actualizo con exito',
+               usuario: usrDB
+           })
+    })
+ })
   
-          res.json({
-              ok: 200,
-              msg: 'Usuario actualizado con exito',
-              id: id,
-              nombre:nombre
-          }) 
-  })
+ app.delete('/usuario/:id', function(req, res){
+    //   let id = req.params.id;
   
-  app.delete('/usuario', function(req, res){
-      let id = req.params.id;
+    //   Usuario.deleteOne({_id: id}, (err, usuarioBorrado) => {
+    //    
+    //   })
   
-      res.json({
-          ok: 200,
-          msg: 'Usuario eliminado satisfactoriamente',
-          id:id
-      })
-  })
+let id = req.params.id;
+
+Usuario.findByIdAndUpdate(id, 
+    {activo: false}, {new: true, runValidators: true, context: 'query'}, 
+    (err, usrDB) => {
+    if(err) {
+        return res .status(400).json({
+            ok: false,
+            msg: 'Error al momento de eliminar',
+            err
+        })
+    }
+    
+        res.json({
+            ok: true,
+            msg: 'Usuario eliminado con exito',
+            usrDB
+        })
+    })
+})
+
+
+
 
   module.exports = app;
